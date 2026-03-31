@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Budget Variance System</title>
+
+<style>
+
+body{
+font-family:Arial;
+padding:20px;
+}
+
+button{
+padding:8px;
+margin:5px;
+}
+
+table{
+border-collapse:collapse;
+width:100%;
+margin-top:15px;
+}
+
+th,td{
+border:1px solid #ccc;
+padding:6px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Budget Variance Monitoring</h2>
+
+<hr>
+
+<h3>Upload Budget CSV</h3>
+<input type="file" id="budgetFile">
+<button onclick="uploadBudget()">Upload Budget</button>
+
+<hr>
+
+<h3>Upload Actual CSV</h3>
+<input type="file" id="actualFile">
+<button onclick="uploadActual()">Upload Actual</button>
+
+<hr>
+
+<h3>View Data</h3>
+
+<button onclick="viewBudget()">View Budget</button>
+<button onclick="viewActual()">View Actual</button>
+
+<div id="table"></div>
+
+
+<script>
+
+// ==========================
+// SUPABASE CONFIG
+// ==========================
+
+const SUPABASE_URL = "https://hhtulgtzdfcifksrhqwv.supabase.co";
+
+const SUPABASE_KEY = "YOUR_ANON_PUBLIC_KEY";
+
+
+// ==========================
+// Upload Budget
+// ==========================
+function uploadBudget(){
+
+const file = document.getElementById("budgetFile").files[0];
+
+if(!file){
+
+alert("Select File");
+
+return;
+
+}
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+uploadCSV(e.target.result,"budget_data");
+
+};
+
+reader.readAsText(file);
+
+}
+
+
+// ==========================
+// Upload Actual
+// ==========================
+function uploadActual(){
+
+const file = document.getElementById("actualFile").files[0];
+
+if(!file){
+
+alert("Select File");
+
+return;
+
+}
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+uploadCSV(e.target.result,"actual_data");
+
+};
+
+reader.readAsText(file);
+
+}
+
+
+// ==========================
+// Upload CSV
+// ==========================
+function uploadCSV(csv,table){
+
+const rows = csv.split("\n").map(r=>r.split(","));
+
+const headers = rows[0];
+
+let data = [];
+
+for(let i=1;i<rows.length;i++){
+
+let row = rows[i];
+
+if(row.length !== headers.length) continue;
+
+let obj = {};
+
+headers.forEach((h,index)=>{
+
+obj[h.trim().toLowerCase().replace(/ /g,"_")] = row[index];
+
+});
+
+data.push(obj);
+
+}
+
+fetch(`${SUPABASE_URL}/rest/v1/${table}`,{
+
+method:"POST",
+
+headers:{
+
+"apikey":SUPABASE_KEY,
+
+"Authorization":"Bearer "+SUPABASE_KEY,
+
+"Content-Type":"application/json"
+
+},
+
+body:JSON.stringify(data)
+
+})
+
+.then(()=>alert("Upload Successful"))
+
+}
+
+
+// ==========================
+// View Budget
+// ==========================
+function viewBudget(){
+
+fetchData("budget_data");
+
+}
+
+
+// ==========================
+// View Actual
+// ==========================
+function viewActual(){
+
+fetchData("actual_data");
+
+}
+
+
+// ==========================
+// Fetch Data
+// ==========================
+function fetchData(table){
+
+fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`,{
+
+headers:{
+
+"apikey":SUPABASE_KEY,
+
+"Authorization":"Bearer "+SUPABASE_KEY
+
+}
+
+})
+
+.then(res=>res.json())
+
+.then(renderTable)
+
+}
+
+
+// ==========================
+// Render Table
+// ==========================
+function renderTable(data){
+
+if(!data.length){
+
+document.getElementById("table").innerHTML="No Data";
+
+return;
+
+}
+
+let html="<table><tr>";
+
+Object.keys(data[0]).forEach(key=>{
+
+html+="<th>"+key+"</th>";
+
+});
+
+html+="</tr>";
+
+data.forEach(row=>{
+
+html+="<tr>";
+
+Object.values(row).forEach(val=>{
+
+html+="<td>"+(val ?? "")+"</td>";
+
+});
+
+html+="</tr>";
+
+});
+
+html+="</table>";
+
+document.getElementById("table").innerHTML=html;
+
+}
+
+</script>
+
+</body>
+
+</html>
